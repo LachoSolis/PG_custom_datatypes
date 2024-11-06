@@ -1,6 +1,5 @@
 from flask import Blueprint, request
 from src.controllers.userController import crear_usuario, crear_usuario_base,login_usuario, obtener_usuario, eliminar_usuario
-from flask_jwt_extended import JWTManager
 
 usuario_blueprint = Blueprint('usuarios', __name__)
 

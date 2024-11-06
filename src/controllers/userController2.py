@@ -1,5 +1,5 @@
 from flask import jsonify
-from src.models.user import User, db
+from src.models.user2 import User2, db
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 
 @jwt_required()
@@ -8,22 +8,26 @@ def crear_usuario(data):
     email = data.get('email')
     password = data.get('password')
     direccion = data.get('direccion')
-    
+        
     if not nombre or not email or not password:
         return jsonify({"mensaje": "Faltan campos obligatorios"}), 400
+        
+    if not direccion or not all(key in direccion for key in ["calle", "ciudad", "estado", "codigo_postal"]):
+        return jsonify({"mensaje": "La dirección debe incluir calle, ciudad, estado y codigo_postal"}), 400
 
-    if User.query.filter_by(email=email).first():
+    if User2.query.filter_by(email=email).first():
         return jsonify({"mensaje": "El email ya está registrado"}), 400
-
-    # Aquí se debería cifrar la contraseña
-    hashed_password = User.generate_password_hash(password)
-
-    nuevo_usuario = User(nombre=nombre, email=email, password=hashed_password, direccion=direccion)
+    
+    hashed_password = User2.generate_password_hash(password)
+    
+    nuevo_usuario = User2(nombre=nombre, email=email, password=hashed_password)
+    nuevo_usuario.set_direccion(direccion)
+    
     db.session.add(nuevo_usuario)
     db.session.commit()
     
     return jsonify({
-        "mensaje": "Usuario creado con bcrypt",
+        "mensaje": "Usuario creado",
         "id": nuevo_usuario.id,
         "nombre": nuevo_usuario.nombre,
         "email": nuevo_usuario.email,
@@ -35,19 +39,24 @@ def crear_usuario_base(data):
     email = data.get('email')
     password = data.get('password')
     direccion = data.get('direccion')
-
+    
     if not nombre or not email or not password or not direccion:
         return jsonify({"mensaje": "Faltan campos obligatorios"}), 400
+        
+    if not all(key in direccion for key in ["calle", "ciudad", "estado", "codigo_postal"]):
+        return jsonify({"mensaje": "La dirección debe incluir calle, ciudad, estado y codigo_postal"}), 400
 
-    if User.query.filter_by(email=email).first():
+    if User2.query.filter_by(email=email).first():
         return jsonify({"mensaje": "El email ya está registrado"}), 400
-
-    nuevo_usuario = User(nombre=nombre, email=email, password=password, direccion=direccion)
+    
+    nuevo_usuario = User2(nombre=nombre, email=email, password=password)
+    nuevo_usuario.set_direccion(direccion)
+    
     db.session.add(nuevo_usuario)
     db.session.commit()
     
     return jsonify({
-        "mensaje": "Usuario creado sin bcrypt",
+        "mensaje": "Usuario creado sin jwt",
         "id": nuevo_usuario.id,
         "nombre": nuevo_usuario.nombre,
         "email": nuevo_usuario.email,
@@ -58,7 +67,7 @@ def login_usuario(data):
     email = data.get('email')
     password = data.get('password')
 
-    user = User.query.filter_by(email=email).first()
+    user = User2.query.filter_by(email=email).first()
     if not user or not user.check_password(password):
         return jsonify({"mensaje": "Credenciales inválidas"}), 401
 
@@ -68,7 +77,7 @@ def login_usuario(data):
 @jwt_required()
 def obtener_usuario():
     user_id = get_jwt_identity()
-    user = User.query.get(user_id)
+    user = User2.query.get(user_id)
     
     if not user:
         return jsonify({"mensaje": "Usuario no encontrado"}), 404
@@ -77,12 +86,12 @@ def obtener_usuario():
         "id": user.id,
         "nombre": user.nombre,
         "email": user.email,
-        "direccion": user.get_direccion()
+        "direccion": user.get_direccion()  # Usa get_direccion para recuperar el formato JSON
     }), 200
 
 @jwt_required()
 def eliminar_usuario(user_id):
-    user = User.query.get(user_id)
+    user = User2.query.get(user_id)
     
     if not user:
         return jsonify({"mensaje": "Usuario no encontrado"}), 404
